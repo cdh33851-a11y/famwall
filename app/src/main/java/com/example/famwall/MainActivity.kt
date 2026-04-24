@@ -8,6 +8,7 @@ import android.content.SharedPreferences
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.TextUtils
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.Menu
@@ -564,7 +565,8 @@ class MainActivity : AppCompatActivity() {
                 text = buildEventCellSummary(event, cellDate)
                 textSize = 10f
                 setTextColor(textColor)
-                isSingleLine = true
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
                 includeFontPadding = false
                 gravity = Gravity.START
             }, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(4), 0, 0) })
