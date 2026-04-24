@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
 
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+val signingPropertiesFile = rootProject.file("signing.properties")
+val signingProperties = Properties().apply {
+    if (signingPropertiesFile.exists()) {
+        signingPropertiesFile.inputStream().use(::load)
+    }
 }
 
 android {
@@ -31,9 +40,24 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = signingProperties["storeFile"] as String?
+            if (storeFilePath != null) {
+                storeFile = rootProject.file(storeFilePath)
+                storePassword = signingProperties["storePassword"] as String?
+                keyAlias = signingProperties["keyAlias"] as String?
+                keyPassword = signingProperties["keyPassword"] as String?
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (signingPropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
