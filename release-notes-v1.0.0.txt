@@ -1,0 +1,11 @@
+﻿version: 1.0.0
+forceUpdate: false
+
+변경사항:
+- 가족도배 초기 릴리즈
+- 일정 등록/수정/삭제
+- 선택 날짜 일정 및 날짜별 카테고리
+- 자재주문 완료 체크 표시
+- 일정 검색
+- Firebase Firestore 동기화
+- GitHub Releases 자동 업데이트 기반 추가

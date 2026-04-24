@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Fam.Wall</string>
+    <string name="main_title">&#xAC00;&#xC871;&#xB3C4;&#xBC30;</string>
+    <string name="menu_calendar">&#xB2EC;&#xB825;</string>
+    <string name="menu_tbd_1">&#xBBF8;&#xC815;</string>
+    <string name="menu_tbd_2">&#xBBF8;&#xC815;</string>
+    <string name="menu_tbd_3">&#xBBF8;&#xC815;</string>
+    <string name="hero_badge">&#xC6B0;&#xB9AC; &#xAC00;&#xC871; &#xBCF4;&#xB4DC;</string>
+    <string name="hero_title">&#xC624;&#xB298;&#xB3C4; &#xD55C;&#xB208;&#xC5D0; &#xBCF4;&#xB294; &#xAC00;&#xC871; &#xC77C;&#xC815;</string>
+    <string name="hero_subtitle">&#xC77C;&#xC815;, &#xBA54;&#xBAA8;, &#xC900;&#xBE44;&#xD560; &#xC77C;&#xC744; &#xCC28;&#xBD84;&#xD558;&#xACE0; &#xC815;&#xB9AC;&#xD574;&#xBCF4;&#xC138;&#xC694;.</string>
+    <string name="toolbar_subtitle_format">%1$s &#x00B7; %2$s</string>
+    <string name="toolbar_subtitle_select_user">&#xC0AC;&#xC6A9;&#xC790; &#xC120;&#xD0DD; &#xD544;&#xC694; &#x00B7; %1$s</string>
+    <string name="select_user_title">&#xC0AC;&#xC6A9;&#xC790; &#xC120;&#xD0DD;</string>
+    <string name="select_user_confirm">&#xC120;&#xD0DD; &#xC644;&#xB8CC;</string>
+    <string name="change_user">&#xC0AC;&#xC6A9;&#xC790; &#xBCC0;&#xACBD;</string>
+    <string name="today">&#xC624;&#xB298;</string>
+    <string name="search_schedule">&#xC77C;&#xC815;&#xAC80;&#xC0C9;</string>
+    <string name="previous_month">&#xC774;&#xC804; &#xB2EC;</string>
+    <string name="next_month">&#xB2E4;&#xC74C; &#xB2EC;</string>
+    <string name="user_choi">&#xCD5C;&#xB300;&#xD55C;</string>
+    <string name="user_han">&#xD55C;&#xC21C;&#xB140;</string>
+    <string name="user_lee">&#xC774;&#xC608;&#xC18C;</string>
+    <string name="section_quick">&#xBE60;&#xB978; &#xD655;&#xC778;</string>
+    <string name="today_schedule">&#xC624;&#xB298; &#xC77C;&#xC815;</string>
+    <string name="no_schedule">&#xC77C;&#xC815; &#xC5C6;&#xC74C;</string>
+    <string name="day_mon">&#xC6D4;</string>
+    <string name="day_tue">&#xD654;</string>
+    <string name="day_wed">&#xC218;</string>
+    <string name="day_thu">&#xBAA9;</string>
+    <string name="day_fri">&#xAE08;</string>
+    <string name="day_sat">&#xD1A0;</string>
+    <string name="day_sun">&#xC77C;</string>
+    <string name="card_schedule_title">&#xC774;&#xBC88; &#xC8FC; &#xC77C;&#xC815;</string>
+    <string name="card_schedule_body">&#xB2E4;&#xAC00;&#xC624;&#xB294; &#xC57D;&#xC18D;&#xACFC; &#xAE30;&#xB150;&#xC77C;&#xC744; &#xBC14;&#xB85C; &#xD655;&#xC778;&#xD560; &#xC218; &#xC788;&#xC5B4;&#xC694;.</string>
+    <string name="card_note_title">&#xAC00;&#xC871; &#xBA54;&#xBAA8;</string>
+    <string name="card_note_body">&#xC911;&#xC694;&#xD55C; &#xC804;&#xB2EC;&#xC0AC;&#xD56D;&#xACFC; &#xD560; &#xC77C;&#xC744; &#xAE54;&#xB054;&#xD558;&#xAC8C; &#xB0A8;&#xACA8;&#xBCF4;&#xC138;&#xC694;.</string>
+</resources>
