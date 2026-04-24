@@ -27,8 +27,8 @@ android {
         applicationId = "com.example.famwall"
         minSdk = 36
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         buildConfigField("String", "GITHUB_RELEASE_OWNER", "\"cdh33851-a11y\"")
         buildConfigField("String", "GITHUB_RELEASE_REPO", "\"famwall\"")

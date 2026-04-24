@@ -562,7 +562,7 @@ class MainActivity : AppCompatActivity() {
         val lineCount = minOf(dateEvents.size, MAX_EVENT_SUMMARY_LINES_IN_CELL)
         dateEvents.take(lineCount).forEach { event ->
             dayCell.addView(TextView(this).apply {
-                text = buildEventCellSummary(event, cellDate)
+                text = buildEventCellSummary(event)
                 textSize = 10f
                 setTextColor(textColor)
                 maxLines = 2
@@ -585,11 +585,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildEventCellSummary(event: ScheduleEvent, cellDate: LocalDate): String {
-        val title = event.title.trim()
+    private fun buildEventCellSummary(event: ScheduleEvent): String {
+        return event.title.trim()
             .ifEmpty { event.content.trim() }
             .ifEmpty { "\uC77C\uC815" }
-        return "${event.categoryForDate(cellDate).initial} $title"
     }
 
     private fun handleDateCellClick(cellDate: LocalDate) {
