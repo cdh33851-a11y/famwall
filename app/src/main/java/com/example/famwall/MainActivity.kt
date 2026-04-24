@@ -28,7 +28,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.time.LocalDate
@@ -290,13 +289,7 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
 
-                val isLongEnough = kotlin.math.abs(deltaY) > dp(64)
-                val isFastEnough = kotlin.math.abs(velocityY) > 160
-                if (!isLongEnough || !isFastEnough) return false
-
-                markCalendarSwiped()
-                showYearOffset(if (deltaY < 0) 1 else -1)
-                return true
+                return false
             }
         })
 
@@ -677,10 +670,6 @@ class MainActivity : AppCompatActivity() {
         showMonth(displayedMonth.plusMonths(monthOffset.toLong()))
     }
 
-    private fun showYearOffset(yearOffset: Int) {
-        showYear(displayedMonth.plusYears(yearOffset.toLong()))
-    }
-
     private fun showMonth(targetMonth: YearMonth) {
         if (targetMonth == displayedMonth) {
             renderCalendar(activeUserName)
@@ -689,19 +678,6 @@ class MainActivity : AppCompatActivity() {
 
         val direction = if (targetMonth.isAfter(displayedMonth)) 1 else -1
         animateCalendarTransition(direction, vertical = false) {
-            displayedMonth = targetMonth
-            renderCalendar(activeUserName)
-        }
-    }
-
-    private fun showYear(targetMonth: YearMonth) {
-        if (targetMonth == displayedMonth) {
-            renderCalendar(activeUserName)
-            return
-        }
-
-        val direction = if (targetMonth.isAfter(displayedMonth)) 1 else -1
-        animateCalendarTransition(direction, vertical = true) {
             displayedMonth = targetMonth
             renderCalendar(activeUserName)
         }
@@ -835,17 +811,12 @@ class MainActivity : AppCompatActivity() {
         val root: View = findViewById(R.id.root_layout)
         val appBarLayout: AppBarLayout = findViewById(R.id.app_bar)
         val scrollContent: View = findViewById(R.id.scroll_content)
-        val bottomNavigationView: BottomNavigationView = findViewById(R.id.bottom_navigation)
 
         val appBarTopPadding = appBarLayout.paddingTop
         val scrollLeftPadding = scrollContent.paddingLeft
         val scrollTopPadding = scrollContent.paddingTop
         val scrollRightPadding = scrollContent.paddingRight
         val scrollBottomPadding = scrollContent.paddingBottom
-        val bottomNavLeftPadding = bottomNavigationView.paddingLeft
-        val bottomNavTopPadding = bottomNavigationView.paddingTop
-        val bottomNavRightPadding = bottomNavigationView.paddingRight
-        val bottomNavBottomPadding = bottomNavigationView.paddingBottom
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
             val systemBarsInsets: Insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -855,12 +826,6 @@ class MainActivity : AppCompatActivity() {
                 appBarTopPadding + systemBarsInsets.top,
                 appBarLayout.paddingRight,
                 appBarLayout.paddingBottom,
-            )
-            bottomNavigationView.setPadding(
-                bottomNavLeftPadding + systemBarsInsets.left,
-                bottomNavTopPadding,
-                bottomNavRightPadding + systemBarsInsets.right,
-                bottomNavBottomPadding + systemBarsInsets.bottom,
             )
             scrollContent.setPadding(
                 scrollLeftPadding + systemBarsInsets.left,
