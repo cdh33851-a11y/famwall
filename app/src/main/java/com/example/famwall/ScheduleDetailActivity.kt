@@ -209,7 +209,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
         }
         content.addView(titleRow)
 
-        addDetailLine(content, "\uB0B4\uC6A9", event.content.trim().ifEmpty { "\uB0B4\uC6A9 \uC5C6\uC74C" })
+        addDetailLine(content, "\uB0B4\uC6A9", event.contentForDate(selectedDate).trim().ifEmpty { "\uB0B4\uC6A9 \uC5C6\uC74C" })
         if (event.scheduleType == ScheduleType.CONTINUOUS) {
             addDetailLine(content, "\uC77C\uC815 \uAE30\uAC04", formatContinuousDateRange(event.startDate, event.endDate))
         } else {
@@ -334,7 +334,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
 
     private fun getDisplayTitle(event: ScheduleEvent): String {
         return event.title.trim()
-            .ifEmpty { event.content.trim() }
+            .ifEmpty { event.contentForDate(selectedDate).trim() }
             .ifEmpty { event.categoryForDate(selectedDate).label + " \uC77C\uC815" }
     }
 

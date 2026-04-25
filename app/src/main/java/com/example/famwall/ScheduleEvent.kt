@@ -15,6 +15,7 @@ data class ScheduleEvent(
     var endDate: LocalDate? = null,
     var selectedDates: List<LocalDate> = emptyList(),
     var selectedDateCategories: Map<LocalDate, ScheduleCategory> = emptyMap(),
+    var dateContents: Map<LocalDate, String> = emptyMap(),
     var materialOrderedDates: List<LocalDate> = emptyList(),
     var scheduleType: ScheduleType = ScheduleType.CONTINUOUS,
     var createdAt: Long = System.currentTimeMillis(),
@@ -62,6 +63,26 @@ data class ScheduleEvent(
         return selectedDateCategories[date] ?: category
     }
 
+    fun contentForDate(date: LocalDate?): String {
+        if (date != null && dateContents.containsKey(date)) {
+            return dateContents[date].orEmpty()
+        }
+
+        if (dateContents.isNotEmpty()) {
+            return ""
+        }
+
+        return if (date != null && date == primaryContentDate()) {
+            content
+        } else {
+            ""
+        }
+    }
+
+    fun primaryContentDate(): LocalDate? {
+        return occurrenceDates().firstOrNull() ?: startDate ?: selectedDates.firstOrNull()
+    }
+
     fun isMaterialOrderedForDate(date: LocalDate?): Boolean {
         return date != null && materialOrderedDates.contains(date)
     }
@@ -73,6 +94,11 @@ data class ScheduleEvent(
         val selectedDateCategoryJson = JSONObject()
         selectedDateCategories.forEach { (date, category) ->
             selectedDateCategoryJson.put(date.toString(), category.key)
+        }
+
+        val dateContentJson = JSONObject()
+        dateContents.forEach { (date, content) ->
+            dateContentJson.put(date.toString(), content)
         }
 
         val materialOrderedDateArray = JSONArray()
@@ -88,6 +114,7 @@ data class ScheduleEvent(
             .put(FIELD_END_DATE, endDate?.toString() ?: JSONObject.NULL)
             .put(FIELD_SELECTED_DATES, selectedDateArray)
             .put(FIELD_SELECTED_DATE_CATEGORIES, selectedDateCategoryJson)
+            .put(FIELD_DATE_CONTENTS, dateContentJson)
             .put(FIELD_MATERIAL_ORDERED_DATES, materialOrderedDateArray)
             .put(FIELD_SCHEDULE_TYPE, scheduleType.key)
             .put(FIELD_CREATED_AT, createdAt)
@@ -104,6 +131,7 @@ data class ScheduleEvent(
         private const val FIELD_END_DATE = "endDate"
         private const val FIELD_SELECTED_DATES = "selectedDates"
         private const val FIELD_SELECTED_DATE_CATEGORIES = "selectedDateCategories"
+        private const val FIELD_DATE_CONTENTS = "dateContents"
         private const val FIELD_MATERIAL_ORDERED_DATES = "materialOrderedDates"
         private const val FIELD_SCHEDULE_TYPE = "scheduleType"
         private const val FIELD_CREATED_AT = "createdAt"
@@ -121,6 +149,7 @@ data class ScheduleEvent(
                 endDate = parseDateOrNull(json.optString(FIELD_END_DATE).takeIf { it.isNotBlank() }),
                 selectedDates = parseSelectedDates(json.optJSONArray(FIELD_SELECTED_DATES)),
                 selectedDateCategories = parseSelectedDateCategories(json.optJSONObject(FIELD_SELECTED_DATE_CATEGORIES)),
+                dateContents = parseDateContents(json.optJSONObject(FIELD_DATE_CONTENTS)),
                 materialOrderedDates = parseSelectedDates(json.optJSONArray(FIELD_MATERIAL_ORDERED_DATES)),
                 scheduleType = ScheduleType.fromKey(json.optString(FIELD_SCHEDULE_TYPE, ScheduleType.CONTINUOUS.key)),
                 createdAt = createdAt,
@@ -157,6 +186,21 @@ data class ScheduleEvent(
                 while (keys.hasNext()) {
                     val rawDate = keys.next()
                     put(LocalDate.parse(rawDate), ScheduleCategory.fromKey(jsonObject.optString(rawDate)))
+                }
+            }
+        }
+
+        private fun parseDateContents(jsonObject: JSONObject?): Map<LocalDate, String> {
+            if (jsonObject == null) {
+                return emptyMap()
+            }
+
+            return buildMap {
+                val keys = jsonObject.keys()
+                while (keys.hasNext()) {
+                    val rawDate = keys.next()
+                    val value = jsonObject.optString(rawDate, "")
+                    put(LocalDate.parse(rawDate), value)
                 }
             }
         }

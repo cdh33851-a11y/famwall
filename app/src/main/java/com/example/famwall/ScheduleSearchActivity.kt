@@ -305,11 +305,8 @@ class ScheduleSearchActivity : AppCompatActivity() {
     private fun searchSchedules(events: List<ScheduleEvent>, state: SearchState): List<ScheduleSearchResult> {
         val normalizedKeyword = state.keyword.lowercase(Locale.ROOT)
         return events.mapNotNull { event ->
-            if (!matchesKeyword(event, normalizedKeyword)) {
-                return@mapNotNull null
-            }
-
-            val rangedDates = filterDatesByRange(event, state)
+            val keywordDates = filterDatesByKeyword(event, normalizedKeyword)
+            val rangedDates = filterDatesByRange(keywordDates, state)
             val categoryDates = filterDatesByCategory(event, rangedDates, state.category)
             if (categoryDates.isEmpty()) {
                 null
@@ -319,18 +316,24 @@ class ScheduleSearchActivity : AppCompatActivity() {
         }.sortedWith(compareBy<ScheduleSearchResult> { it.primaryDate }.thenBy { getDisplayTitle(it.event) })
     }
 
-    private fun matchesKeyword(event: ScheduleEvent, normalizedKeyword: String): Boolean {
+    private fun filterDatesByKeyword(event: ScheduleEvent, normalizedKeyword: String): List<LocalDate> {
+        val occurrenceDates = event.occurrenceDates()
         if (normalizedKeyword.isBlank()) {
-            return true
+            return occurrenceDates
         }
 
         val title = event.title.lowercase(Locale.ROOT)
-        val content = event.content.lowercase(Locale.ROOT)
-        return title.contains(normalizedKeyword) || content.contains(normalizedKeyword)
+        if (title.contains(normalizedKeyword)) {
+            return occurrenceDates
+        }
+
+        return occurrenceDates.filter { date ->
+            event.contentForDate(date).lowercase(Locale.ROOT).contains(normalizedKeyword)
+        }
     }
 
-    private fun filterDatesByRange(event: ScheduleEvent, state: SearchState): List<LocalDate> {
-        return event.occurrenceDates().filter { date ->
+    private fun filterDatesByRange(dates: List<LocalDate>, state: SearchState): List<LocalDate> {
+        return dates.filter { date ->
             (state.startDate == null || !date.isBefore(state.startDate)) &&
                 (state.endDate == null || !date.isAfter(state.endDate))
         }
@@ -400,7 +403,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         titleRow.addView(TextView(this).apply {
-            text = getDisplayTitle(event)
+            text = getDisplayTitle(event, primaryDate)
             setTextAppearance(R.style.TextAppearance_FamWall_CardTitle)
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -408,7 +411,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
         content.addView(titleRow, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(8), 0, 0) })
 
         content.addView(TextView(this).apply {
-            text = event.content.trim().ifEmpty { "내용 없음" }
+            text = event.contentForDate(primaryDate).trim().ifEmpty { "내용 없음" }
             setTextAppearance(R.style.TextAppearance_FamWall_Body)
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -580,6 +583,12 @@ class ScheduleSearchActivity : AppCompatActivity() {
     private fun getDisplayTitle(event: ScheduleEvent): String {
         return event.title.trim()
             .ifEmpty { event.content.trim() }
+            .ifEmpty { "일정" }
+    }
+
+    private fun getDisplayTitle(event: ScheduleEvent, date: LocalDate): String {
+        return event.title.trim()
+            .ifEmpty { event.contentForDate(date).trim() }
             .ifEmpty { "일정" }
     }
 

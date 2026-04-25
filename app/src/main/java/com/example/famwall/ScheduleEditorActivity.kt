@@ -52,6 +52,7 @@ class ScheduleEditorActivity : AppCompatActivity() {
     private var scheduleType = ScheduleType.CONTINUOUS
     private val selectedDates = mutableListOf<LocalDate>()
     private val selectedDateCategories = mutableMapOf<LocalDate, ScheduleCategory>()
+    private val dateContents = mutableMapOf<LocalDate, String>()
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(KoreanLocaleContext.wrap(newBase))
@@ -101,6 +102,8 @@ class ScheduleEditorActivity : AppCompatActivity() {
         selectedDates.forEach { date ->
             selectedDateCategories.putIfAbsent(date, draft.category)
         }
+        dateContents.clear()
+        dateContents.putAll(draft.normalizedDateContents())
     }
 
     private fun createPage(): View {
@@ -171,7 +174,7 @@ class ScheduleEditorActivity : AppCompatActivity() {
         content.addView(createTextInputLayout("\uC77C\uC815 \uC81C\uBAA9", titleInput, multiLine = false))
 
         contentInput = createTextInput("\uBA54\uBAA8\uB098 \uC0C1\uC138 \uB0B4\uC6A9\uC744 \uC801\uC5B4\uC8FC\uC138\uC694", multiLine = true).apply {
-            setText(draft.content)
+            setText(draft.contentForDate(clickedDate))
         }
         content.addView(createTextInputLayout("\uC77C\uC815 \uB0B4\uC6A9", contentInput, multiLine = true))
 
@@ -295,7 +298,6 @@ class ScheduleEditorActivity : AppCompatActivity() {
         val selectedCategory = findCheckedTag(categoryGroup, ScheduleCategory::class.java, ScheduleCategory.WALLPAPER)
         val eventToSave = editingEvent?.copy() ?: ScheduleEvent()
         eventToSave.title = title
-        eventToSave.content = body
         eventToSave.category = selectedCategory
         eventToSave.userName = activeUserName
         eventToSave.scheduleType = scheduleType
@@ -322,6 +324,12 @@ class ScheduleEditorActivity : AppCompatActivity() {
                 selectedDateCategories[date] ?: selectedCategory
             }
         }
+
+        val contentDate = eventToSave.contentEditDate(clickedDate)
+        eventToSave.dateContents = buildUpdatedDateContents(eventToSave, contentDate, body)
+        eventToSave.content = eventToSave.primaryContentDate()
+            ?.let { eventToSave.dateContents[it].orEmpty() }
+            .orEmpty()
         eventToSave.materialOrderedDates = eventToSave.materialOrderedDates
             .filter { eventToSave.occursOn(it) }
             .toSortedSet()
@@ -346,6 +354,47 @@ class ScheduleEditorActivity : AppCompatActivity() {
             endDate = date,
             scheduleType = ScheduleType.CONTINUOUS,
         )
+    }
+
+    private fun ScheduleEvent.normalizedDateContents(): Map<LocalDate, String> {
+        if (dateContents.isNotEmpty()) {
+            return dateContents
+        }
+
+        val primaryDate = primaryContentDate() ?: return emptyMap()
+        return if (content.isBlank()) {
+            emptyMap()
+        } else {
+            mapOf(primaryDate to content)
+        }
+    }
+
+    private fun ScheduleEvent.contentEditDate(preferredDate: LocalDate): LocalDate {
+        val occurrenceDates = occurrenceDates()
+        return if (occurrenceDates.contains(preferredDate)) {
+            preferredDate
+        } else {
+            occurrenceDates.firstOrNull() ?: preferredDate
+        }
+    }
+
+    private fun buildUpdatedDateContents(
+        event: ScheduleEvent,
+        contentDate: LocalDate,
+        body: String,
+    ): Map<LocalDate, String> {
+        val occurrenceDateSet = event.occurrenceDates().toSet()
+        val updatedContents = dateContents
+            .filterKeys { occurrenceDateSet.contains(it) }
+            .toMutableMap()
+
+        if (body.isBlank()) {
+            updatedContents.remove(contentDate)
+        } else {
+            updatedContents[contentDate] = body
+        }
+
+        return updatedContents.toSortedMap()
     }
 
     private fun updateDateSections() {

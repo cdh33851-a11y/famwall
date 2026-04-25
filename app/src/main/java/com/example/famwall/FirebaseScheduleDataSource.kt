@@ -5,7 +5,6 @@ import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.SetOptions
 import java.time.LocalDate
 
 class FirebaseScheduleDataSource private constructor(
@@ -40,7 +39,7 @@ class FirebaseScheduleDataSource private constructor(
     fun saveEvent(event: ScheduleEvent) {
         scheduleCollection()
             .document(event.id)
-            .set(toFirestoreMap(event), SetOptions.merge())
+            .set(toFirestoreMap(event))
             .addOnFailureListener { exception ->
                 Log.e(TAG, "Failed to save schedule to Firestore. id=${event.id}", exception)
             }
@@ -68,6 +67,7 @@ class FirebaseScheduleDataSource private constructor(
             FIELD_END_DATE to event.endDate?.toString(),
             FIELD_SELECTED_DATES to event.selectedDates.map { it.toString() },
             FIELD_SELECTED_DATE_CATEGORIES to event.selectedDateCategories.mapKeys { it.key.toString() }.mapValues { it.value.key },
+            FIELD_DATE_CONTENTS to event.dateContents.mapKeys { it.key.toString() },
             FIELD_MATERIAL_ORDERED_DATES to event.materialOrderedDates.map { it.toString() },
             FIELD_SCHEDULE_TYPE to event.scheduleType.key,
             FIELD_CREATED_AT to event.createdAt,
@@ -85,6 +85,7 @@ class FirebaseScheduleDataSource private constructor(
         val categoryKey = data[FIELD_CATEGORY] as? String
         val scheduleTypeKey = data[FIELD_SCHEDULE_TYPE] as? String
         val selectedDateCategories = data[FIELD_SELECTED_DATE_CATEGORIES] as? Map<String, Any?>
+        val dateContents = data[FIELD_DATE_CONTENTS] as? Map<String, Any?>
 
         return ScheduleEvent(
             id = id,
@@ -96,6 +97,7 @@ class FirebaseScheduleDataSource private constructor(
             endDate = parseDate(data[FIELD_END_DATE] as? String),
             selectedDates = parseDateList(data[FIELD_SELECTED_DATES] as? List<*>),
             selectedDateCategories = parseDateCategoryMap(selectedDateCategories),
+            dateContents = parseDateContentMap(dateContents),
             materialOrderedDates = parseDateList(data[FIELD_MATERIAL_ORDERED_DATES] as? List<*>),
             scheduleType = ScheduleType.fromKey(scheduleTypeKey),
             createdAt = parseLong(data[FIELD_CREATED_AT]),
@@ -130,6 +132,19 @@ class FirebaseScheduleDataSource private constructor(
         }
     }
 
+    private fun parseDateContentMap(rawContents: Map<String, Any?>?): Map<LocalDate, String> {
+        if (rawContents == null) {
+            return emptyMap()
+        }
+
+        return buildMap {
+            rawContents.forEach { (rawDate, rawContent) ->
+                val date = parseDate(rawDate) ?: return@forEach
+                put(date, rawContent as? String ?: "")
+            }
+        }
+    }
+
     private fun parseLong(rawValue: Any?): Long {
         return when (rawValue) {
             is Long -> rawValue
@@ -152,6 +167,7 @@ class FirebaseScheduleDataSource private constructor(
         private const val FIELD_END_DATE = "endDate"
         private const val FIELD_SELECTED_DATES = "selectedDates"
         private const val FIELD_SELECTED_DATE_CATEGORIES = "selectedDateCategories"
+        private const val FIELD_DATE_CONTENTS = "dateContents"
         private const val FIELD_MATERIAL_ORDERED_DATES = "materialOrderedDates"
         private const val FIELD_SCHEDULE_TYPE = "scheduleType"
         private const val FIELD_CREATED_AT = "createdAt"
