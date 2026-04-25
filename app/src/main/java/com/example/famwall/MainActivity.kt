@@ -597,12 +597,12 @@ class MainActivity : AppCompatActivity() {
     private fun createMaterialOrderCheckBadge(materialOrderedEvent: ScheduleEvent): TextView {
         return TextView(this).apply {
             text = "\u2713"
-            textSize = 10f
+            textSize = 13f
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
             setTextColor(getUserAccentColor(materialOrderedEvent.userName))
-            layoutParams = LinearLayout.LayoutParams(dp(10), dp(18)).apply { setMargins(dp(1), 0, 0, 0) }
+            layoutParams = LinearLayout.LayoutParams(dp(14), dp(20)).apply { setMargins(dp(1), 0, 0, 0) }
         }
     }
 
