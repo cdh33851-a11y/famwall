@@ -13,4 +13,9 @@
         android:orderInCategory="2"
         android:title="@string/change_user"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/action_change_theme"
+        android:orderInCategory="3"
+        android:title="@string/change_theme"
+        app:showAsAction="never" />
 </menu>

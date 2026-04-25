@@ -10,7 +10,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -28,7 +27,7 @@ class DeletedNotificationDetailActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         val preferences: SharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -52,7 +51,7 @@ class DeletedNotificationDetailActivity : AppCompatActivity() {
     private fun createPage(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
         }
 
         val toolbar = MaterialToolbar(this).apply {

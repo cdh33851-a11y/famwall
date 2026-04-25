@@ -16,7 +16,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -42,7 +41,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         val preferences: SharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -89,7 +88,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
     private fun createPage(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
         }
 
         val toolbar = MaterialToolbar(this).apply {
@@ -124,14 +123,14 @@ class ScheduleDetailActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(18), dp(12), dp(18), dp(16))
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
 
             addView(createSmallActionButton("\uB2EB\uAE30").apply {
                 setOnClickListener { finish() }
             })
 
             addView(createSmallActionButton("\uC77C\uC815 \uCD94\uAC00").apply {
-                setTextColor(color(R.color.dark_background))
+                setTextColor(color(R.color.on_accent_text))
                 backgroundTintList = ColorStateList.valueOf(getUserAccentColor(activeUserName))
                 setOnClickListener { openScheduleEditorPage(null) }
             }, LinearLayout.LayoutParams(WRAP, dp(48)).apply { setMargins(dp(10), 0, 0, 0) })
@@ -261,7 +260,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             includeFontPadding = false
             setPadding(dp(10), 0, dp(10), 0)
-            setTextColor(color(R.color.dark_background))
+            setTextColor(color(R.color.on_accent_text))
             background = createRoundedBackground(getUserAccentColor(event.userName), dp(8))
             layoutParams = LinearLayout.LayoutParams(WRAP, dp(28))
         }

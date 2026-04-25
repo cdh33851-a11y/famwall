@@ -15,7 +15,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -54,7 +53,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         val preferences: SharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -92,7 +91,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
     private fun createPage(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
         }
 
         val toolbar = MaterialToolbar(this).apply {
@@ -224,7 +223,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(18), dp(12), dp(18), dp(16))
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
 
             previousPageButton = createActionButton("이전", primary = false).apply {
                 setOnClickListener { movePage(-1) }
@@ -538,7 +537,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
             this.text = text
             isCheckable = true
             isChecked = checked
-            setTextColor(ColorStateList(states, intArrayOf(color(R.color.dark_background), color(R.color.text_primary))))
+            setTextColor(ColorStateList(states, intArrayOf(color(R.color.on_accent_text), color(R.color.text_primary))))
             chipBackgroundColor = ColorStateList(states, intArrayOf(checkedColor, color(R.color.day_chip_background)))
             chipStrokeColor = ColorStateList(states, intArrayOf(checkedColor, color(R.color.calendar_day_stroke)))
             chipStrokeWidth = dp(1).toFloat()
@@ -571,7 +570,7 @@ class ScheduleSearchActivity : AppCompatActivity() {
             minimumHeight = dp(42)
             insetTop = 0
             insetBottom = 0
-            setTextColor(if (primary) color(R.color.dark_background) else color(R.color.text_primary))
+            setTextColor(if (primary) color(R.color.on_accent_text) else color(R.color.text_primary))
             backgroundTintList = ColorStateList.valueOf(
                 if (primary) getUserAccentColor(activeUserName) else color(R.color.day_chip_background)
             )

@@ -17,7 +17,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -59,7 +58,7 @@ class ScheduleEditorActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         scheduleRepository = ScheduleRepository(this)
@@ -107,7 +106,7 @@ class ScheduleEditorActivity : AppCompatActivity() {
     private fun createPage(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
         }
 
         val toolbar = MaterialToolbar(this).apply {
@@ -271,14 +270,14 @@ class ScheduleEditorActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
             setPadding(dp(18), dp(12), dp(18), dp(16))
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
 
             addView(createSmallActionButton("\uCDE8\uC18C").apply {
                 setOnClickListener { finish() }
             })
 
             addView(createSmallActionButton(if (editingEvent == null) "\uB4F1\uB85D" else "\uC218\uC815 \uC644\uB8CC").apply {
-                setTextColor(color(R.color.dark_background))
+                setTextColor(color(R.color.on_accent_text))
                 backgroundTintList = ColorStateList.valueOf(getUserAccentColor(activeUserName))
                 setOnClickListener { saveSchedule() }
             }, LinearLayout.LayoutParams(WRAP, dp(48)).apply { setMargins(dp(10), 0, 0, 0) })
@@ -520,7 +519,7 @@ class ScheduleEditorActivity : AppCompatActivity() {
             this.text = text
             isCheckable = true
             isChecked = checked
-            setTextColor(ColorStateList(states, intArrayOf(color(R.color.dark_background), color(R.color.text_primary))))
+            setTextColor(ColorStateList(states, intArrayOf(color(R.color.on_accent_text), color(R.color.text_primary))))
             chipBackgroundColor = ColorStateList(states, intArrayOf(checkedColor, color(R.color.day_chip_background)))
             chipStrokeColor = ColorStateList(states, intArrayOf(checkedColor, color(R.color.calendar_day_stroke)))
             chipStrokeWidth = dp(1).toFloat()

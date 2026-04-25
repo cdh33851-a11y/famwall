@@ -14,7 +14,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -37,7 +36,7 @@ class NotificationListActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         val preferences: SharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -78,7 +77,7 @@ class NotificationListActivity : AppCompatActivity() {
     private fun createPage(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(color(R.color.dark_background))
+            setBackgroundColor(color(R.color.app_background))
         }
 
         val toolbar = MaterialToolbar(this).apply {
@@ -223,7 +222,7 @@ class NotificationListActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             includeFontPadding = false
             setPadding(dp(10), 0, dp(10), 0)
-            setTextColor(color(R.color.dark_background))
+            setTextColor(color(R.color.on_accent_text))
             backgroundTintList = ColorStateList.valueOf(getUserAccentColor(activeUserName))
             background = GradientDrawable().apply {
                 cornerRadius = dp(8).toFloat()

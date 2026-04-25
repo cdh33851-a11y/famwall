@@ -27,7 +27,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
@@ -70,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        FamWallThemeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -265,6 +264,10 @@ class MainActivity : AppCompatActivity() {
             showUserDialog(canCancel = true)
             return true
         }
+        if (item.itemId == R.id.action_change_theme) {
+            showThemeDialog()
+            return true
+        }
         return super.onOptionsItemSelected(item)
     }
 
@@ -351,6 +354,31 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showThemeDialog() {
+        val themeLabels = arrayOf(
+            getString(R.string.theme_light),
+            getString(R.string.theme_dark),
+        )
+        val currentTheme = FamWallThemeManager.getSelectedTheme(this)
+        var selectedIndex = if (currentTheme == FamWallThemePreference.LIGHT) 0 else 1
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.theme_dialog_title)
+            .setSingleChoiceItems(themeLabels, selectedIndex) { _, which -> selectedIndex = which }
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.apply) { _, _ ->
+                val selectedTheme = if (selectedIndex == 0) {
+                    FamWallThemePreference.LIGHT
+                } else {
+                    FamWallThemePreference.DARK
+                }
+                if (selectedTheme != currentTheme) {
+                    FamWallThemeManager.saveTheme(this, selectedTheme)
+                }
+            }
+            .show()
+    }
+
     private fun updateToolbarUser(userName: String) {
         toolbar.subtitle = getString(R.string.toolbar_subtitle_format, userName, todayText)
         applyUserColor(userName)
@@ -389,12 +417,12 @@ class MainActivity : AppCompatActivity() {
         val mutedText = color(R.color.text_muted)
         val sundayText = color(R.color.calendar_weekend_sunday)
         val saturdayText = color(R.color.calendar_weekend_saturday)
-        val darkText = color(R.color.dark_background)
+        val onAccentText = color(R.color.on_accent_text)
 
         calendarGrid.removeAllViews()
         calendarHeader.background = createCalendarCellBackground(accentColor, accentColor, 0)
         calendarMonthTitle.text = displayedMonth.format(DateTimeFormatter.ofPattern("yyyy  M'\uC6D4'", Locale.KOREAN))
-        calendarMonthTitle.setTextColor(darkText)
+        calendarMonthTitle.setTextColor(onAccentText)
 
         val weekdays = arrayOf(
             getString(R.string.day_sun),
@@ -476,7 +504,7 @@ class MainActivity : AppCompatActivity() {
         val sundayText = color(R.color.calendar_weekend_sunday)
         val saturdayText = color(R.color.calendar_weekend_saturday)
         val outsideMonthText = color(R.color.calendar_outside_month)
-        val darkText = color(R.color.dark_background)
+        val onAccentText = color(R.color.on_accent_text)
 
         val dayCell = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -498,8 +526,8 @@ class MainActivity : AppCompatActivity() {
         when {
             isSelected -> background = createCalendarCellBackground(dayBackground, accentColor, 0, 3)
             isToday -> {
-                dateTextColor = darkText
-                summaryTextColor = darkText
+                dateTextColor = onAccentText
+                summaryTextColor = onAccentText
                 background = createCalendarCellBackground(accentColor, accentColor, 0)
             }
             !isCurrentMonth -> {
@@ -607,7 +635,7 @@ class MainActivity : AppCompatActivity() {
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            setTextColor(color(R.color.dark_background))
+            setTextColor(color(R.color.on_accent_text))
             background = createOvalBackground(getUserAccentColor(event.userName))
             layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { setMargins(0, 0, dp(2), 0) }
         }
