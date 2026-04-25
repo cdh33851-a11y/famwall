@@ -87,7 +87,7 @@
     <style name="Widget.FamWall.TodayButton" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/on_accent_text</item>
+        <item name="android:textColor">@color/dark_background</item>
         <item name="backgroundTint">#CCFFFFFF</item>
         <item name="cornerRadius">8dp</item>
         <item name="android:minWidth">58dp</item>
