@@ -1,0 +1,6 @@
+version: 1.1.4
+forceUpdate: false
+
+변경사항:
+- 밝은 테마에서 팝업/다이얼로그 확인, 취소, 완료 버튼 텍스트가 잘 보이도록 Material 테마 액션 색상 수정
+- DatePicker, 사용자 선택, 테마 선택, 삭제 확인 등 창 UI 버튼 가독성 개선
