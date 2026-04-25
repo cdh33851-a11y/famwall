@@ -47,6 +47,10 @@ class CalendarWidgetProvider : AppWidgetProvider() {
                 updateWidgets(appContext)
                 return
             }
+            ACTION_OPEN_DATE -> {
+                openDateFromWidget(appContext, intent.getStringExtra(EXTRA_WIDGET_DATE))
+                return
+            }
         }
 
         super.onReceive(context, intent)
@@ -59,6 +63,8 @@ class CalendarWidgetProvider : AppWidgetProvider() {
         private const val ACTION_PREVIOUS_MONTH = "com.example.famwall.widget.PREVIOUS_MONTH"
         private const val ACTION_NEXT_MONTH = "com.example.famwall.widget.NEXT_MONTH"
         private const val ACTION_TODAY = "com.example.famwall.widget.TODAY"
+        private const val ACTION_OPEN_DATE = "com.example.famwall.widget.OPEN_DATE"
+        private const val EXTRA_WIDGET_DATE = "com.example.famwall.widget.extra.DATE"
         private const val MAX_WIDGET_EVENTS = 2
 
         private val dayViewIds = intArrayOf(
@@ -189,7 +195,7 @@ class CalendarWidgetProvider : AppWidgetProvider() {
                         palette = palette,
                     ),
                 )
-                views.setOnClickPendingIntent(viewId, openAppPendingIntent(context, cellDate))
+                views.setOnClickPendingIntent(viewId, openDatePendingIntent(context, cellDate))
             }
 
             repository.close()
@@ -285,6 +291,46 @@ class CalendarWidgetProvider : AppWidgetProvider() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+        }
+
+        private fun openDatePendingIntent(context: Context, date: LocalDate): PendingIntent {
+            val intent = Intent(context, CalendarWidgetProvider::class.java).apply {
+                action = ACTION_OPEN_DATE
+                putExtra(EXTRA_WIDGET_DATE, date.toString())
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                date.toEpochDay().hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        private fun openDateFromWidget(context: Context, rawDate: String?) {
+            val selectedDate = runCatching {
+                if (rawDate.isNullOrBlank()) LocalDate.now() else LocalDate.parse(rawDate)
+            }.getOrDefault(LocalDate.now())
+            val currentUserName = getSelectedUserName(context)
+            val notificationRepository = ScheduleNotificationRepository(context, currentUserName)
+            notificationRepository.markNotificationsOnDateAsRead(selectedDate)
+            notificationRepository.close()
+
+            val scheduleRepository = ScheduleRepository(context)
+            val hasEvents = scheduleRepository.getEventsForDate(selectedDate).isNotEmpty()
+            scheduleRepository.close()
+
+            val destination = if (hasEvents) {
+                Intent(context, ScheduleDetailActivity::class.java).apply {
+                    putExtra(ScheduleDetailActivity.EXTRA_DATE, selectedDate.toString())
+                }
+            } else {
+                Intent(context, ScheduleEditorActivity::class.java).apply {
+                    putExtra(ScheduleEditorActivity.EXTRA_DATE, selectedDate.toString())
+                }
+            }
+            destination.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(destination)
+            updateWidgets(context)
         }
 
         private fun widgetActionPendingIntent(context: Context, action: String): PendingIntent {
