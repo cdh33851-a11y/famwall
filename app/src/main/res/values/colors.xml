@@ -17,6 +17,7 @@
     <color name="calendar_weekend_sunday">#FFFF6B7A</color>
     <color name="calendar_weekend_saturday">#FF6EA8FF</color>
     <color name="calendar_outside_month">#FF555E6B</color>
+    <color name="notification_unread_dot">#FFFF4D5E</color>
     <color name="bottom_nav_background">#F2141820</color>
     <color name="bottom_nav_inactive">#FFA6AFBD</color>
     <color name="user_choi_accent">#FF63B3FF</color>

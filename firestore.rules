@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /scheduleEvents/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /scheduleNotifications/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /deviceTokens/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

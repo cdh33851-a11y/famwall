@@ -140,8 +140,10 @@ class ScheduleDetailActivity : AppCompatActivity() {
 
     private fun renderScheduleList() {
         listContainer.removeAllViews()
-        val dateEvents = scheduleRepository.getEventsForDate(selectedDate)
-            .sortedByDescending { it.id == focusedEventId }
+        val allDateEvents = scheduleRepository.getEventsForDate(selectedDate)
+        val dateEvents = focusedEventId?.let { eventId ->
+            allDateEvents.filter { it.id == eventId }.ifEmpty { allDateEvents }
+        } ?: allDateEvents
 
         listContainer.addView(createHeaderCard(dateEvents.size))
         if (dateEvents.isEmpty()) {
@@ -304,6 +306,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
             .setMessage("'${getDisplayTitle(event)}' \uC77C\uC815\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?")
             .setNegativeButton("\uCDE8\uC18C", null)
             .setPositiveButton("\uC0AD\uC81C") { _, _ ->
+                ScheduleNotificationRepository.recordScheduleChange(this, ScheduleNotificationAction.DELETED, event)
                 scheduleRepository.deleteEvent(event.id)
                 renderScheduleList()
             }

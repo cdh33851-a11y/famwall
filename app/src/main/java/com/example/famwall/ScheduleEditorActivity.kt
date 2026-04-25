@@ -328,11 +328,14 @@ class ScheduleEditorActivity : AppCompatActivity() {
             .toSortedSet()
             .toList()
 
-        if (editingEvent == null) {
+        val notificationAction = if (editingEvent == null) {
             scheduleRepository.addEvent(eventToSave)
+            ScheduleNotificationAction.ADDED
         } else {
             scheduleRepository.updateEvent(eventToSave)
+            ScheduleNotificationAction.UPDATED
         }
+        ScheduleNotificationRepository.recordScheduleChange(this, notificationAction, eventToSave)
         setResult(RESULT_OK)
         finish()
     }

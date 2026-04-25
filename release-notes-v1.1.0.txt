@@ -1,0 +1,8 @@
+version: 1.1.0
+forceUpdate: false
+
+변경사항:
+- 일정 추가, 수정, 삭제 알림 기능 추가
+- Firebase Cloud Messaging 푸시 알림 연동
+- 사용자별 읽음 상태와 날짜칸 새 알림 표시 추가
+- 알림 리스트와 삭제된 일정 상세 화면 추가

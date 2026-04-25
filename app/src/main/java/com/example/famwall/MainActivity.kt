@@ -2,11 +2,16 @@ package com.example.famwall
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.GestureDetector
@@ -23,6 +28,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -46,6 +52,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var calendarMonthTitle: TextView
     private lateinit var calendarGestureDetector: GestureDetector
     private lateinit var updateManager: GitHubUpdateManager
+    private lateinit var notificationRepository: ScheduleNotificationRepository
+    private lateinit var deviceTokenRepository: DeviceTokenRepository
+    private var notificationMenuItem: MenuItem? = null
 
     private var displayedMonth: YearMonth = YearMonth.now()
     private var selectedDate: LocalDate = LocalDate.now()
@@ -74,11 +83,14 @@ class MainActivity : AppCompatActivity() {
         calendarMonthTitle = findViewById(R.id.calendar_month_title)
         scheduleRepository = createScheduleRepository()
         updateManager = GitHubUpdateManager(this)
+        deviceTokenRepository = DeviceTokenRepository(this)
+        FamWallSystemNotifier(this)
 
         setSupportActionBar(toolbar)
         setupCalendar()
         setupCurrentUser()
         applySystemBarInsets()
+        requestNotificationPermissionIfNeeded()
         checkForUpdate()
     }
 
@@ -87,6 +99,8 @@ class MainActivity : AppCompatActivity() {
         if (::calendarGrid.isInitialized && activeUserName.isNotEmpty()) {
             scheduleRepository.close()
             scheduleRepository = createScheduleRepository()
+            recreateNotificationRepository(activeUserName)
+            deviceTokenRepository.registerCurrentToken(activeUserName)
             renderCalendar(activeUserName)
         }
     }
@@ -94,6 +108,9 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (::scheduleRepository.isInitialized) {
             scheduleRepository.close()
+        }
+        if (::notificationRepository.isInitialized) {
+            notificationRepository.close()
         }
         super.onDestroy()
     }
@@ -234,10 +251,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        notificationMenuItem = menu.findItem(R.id.action_notifications)
+        updateNotificationIndicators()
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_notifications) {
+            openNotificationListPage()
+            return true
+        }
         if (item.itemId == R.id.action_change_user) {
             showUserDialog(canCancel = true)
             return true
@@ -267,6 +290,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun openScheduleSearchPage() {
         startActivity(Intent(this, ScheduleSearchActivity::class.java))
+    }
+
+    private fun openNotificationListPage() {
+        startActivity(Intent(this, NotificationListActivity::class.java))
     }
 
     private fun setupCalendarSwipe() {
@@ -332,7 +359,29 @@ class MainActivity : AppCompatActivity() {
     private fun applyUserColor(userName: String) {
         activeUserName = userName
         toolbar.setSubtitleTextColor(getUserAccentColor(userName))
+        recreateNotificationRepository(userName)
+        deviceTokenRepository.registerCurrentToken(userName)
+        updateNotificationIndicators()
         renderCalendar(userName)
+    }
+
+    private fun recreateNotificationRepository(userName: String) {
+        if (::notificationRepository.isInitialized) {
+            notificationRepository.close()
+        }
+        notificationRepository = ScheduleNotificationRepository(
+            context = this,
+            currentUserName = userName,
+            onNotificationsChanged = {
+                updateNotificationIndicators()
+                if (::calendarGrid.isInitialized && activeUserName.isNotEmpty()) {
+                    renderCalendar(activeUserName)
+                }
+            },
+            onNewNotification = {
+                updateNotificationIndicators()
+            },
+        )
     }
 
     private fun renderCalendar(userName: String) {
@@ -374,6 +423,11 @@ class MainActivity : AppCompatActivity() {
         val today = LocalDate.now()
         val leadingDays = displayedMonth.atDay(1).dayOfWeek.value % 7
         val firstVisibleDate = displayedMonth.atDay(1).minusDays(leadingDays.toLong())
+        val unreadNotificationDates = if (::notificationRepository.isInitialized) {
+            notificationRepository.getUnreadDates()
+        } else {
+            emptySet()
+        }
 
         repeat(42) { index ->
             val cellDate = firstVisibleDate.plusDays(index.toLong())
@@ -384,6 +438,7 @@ class MainActivity : AppCompatActivity() {
                 isToday = cellDate == today,
                 isSelected = cellDate == selectedDate,
                 dateEvents = dateEvents,
+                hasUnreadNotification = unreadNotificationDates.contains(cellDate),
             ).apply {
                 setOnClickListener { handleDateCellClick(cellDate) }
                 setOnTouchListener(::handleCalendarTouch)
@@ -411,6 +466,7 @@ class MainActivity : AppCompatActivity() {
         isToday: Boolean,
         isSelected: Boolean,
         dateEvents: List<ScheduleEvent>,
+        hasUnreadNotification: Boolean,
     ): View {
         val accentColor = getUserAccentColor(activeUserName)
         val dayBackground = color(R.color.calendar_day_background)
@@ -471,6 +527,12 @@ class MainActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(WRAP, dp(22)))
 
         topRow.addView(createMaterialOrderStatusRow(materialOrderedEvents), LinearLayout.LayoutParams(WRAP, dp(22)))
+        topRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        if (hasUnreadNotification) {
+            topRow.addView(createUnreadNotificationDot(), LinearLayout.LayoutParams(dp(7), dp(7)).apply {
+                setMargins(dp(3), 0, dp(1), 0)
+            })
+        }
 
         val badgeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -481,6 +543,12 @@ class MainActivity : AppCompatActivity() {
         addEventSummaryLines(dayCell, dateEvents, summaryTextColor, cellDate)
 
         return dayCell
+    }
+
+    private fun createUnreadNotificationDot(): View {
+        return View(this).apply {
+            background = createOvalBackground(color(R.color.notification_unread_dot))
+        }
     }
 
     private fun createMaterialOrderStatusRow(materialOrderedEvents: List<ScheduleEvent>): View {
@@ -798,6 +866,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateNotificationIndicators() {
+        val hasUnreadNotifications = ::notificationRepository.isInitialized &&
+            notificationRepository.getUnreadNotifications().isNotEmpty()
+        notificationMenuItem?.icon = createNotificationMenuIcon(hasUnreadNotifications)
+    }
+
+    private fun createNotificationMenuIcon(hasUnreadNotifications: Boolean): Drawable? {
+        val bellIcon = ContextCompat.getDrawable(this, R.drawable.ic_notifications)?.mutate() ?: return null
+        if (!hasUnreadNotifications) {
+            return bellIcon
+        }
+
+        val unreadDot = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color(R.color.notification_unread_dot))
+            setSize(dp(8), dp(8))
+        }
+        return LayerDrawable(arrayOf(bellIcon, unreadDot)).apply {
+            setLayerInset(1, dp(16), dp(1), dp(1), dp(15))
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            REQUEST_NOTIFICATION_PERMISSION,
+        )
+    }
+
     private fun getUserAccentColor(userName: String): Int = color(getUserAccentColorRes(userName))
 
     private fun getUserAccentColorRes(userName: String): Int {
@@ -849,6 +954,7 @@ class MainActivity : AppCompatActivity() {
         private const val MAX_MATERIAL_CHECKS_IN_CELL = 3
         private const val MAX_EVENT_BADGES_IN_CELL = 2
         private const val MAX_EVENT_SUMMARY_LINES_IN_CELL = 2
+        private const val REQUEST_NOTIFICATION_PERMISSION = 4101
         private const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         private const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
     }
