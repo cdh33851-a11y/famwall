@@ -9,9 +9,10 @@ class ScheduleRepository(
     context: Context,
     private val onRemoteEventsChanged: (() -> Unit)? = null,
 ) {
-    private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val preferences = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val events = mutableListOf<ScheduleEvent>()
-    private val remoteDataSource = FirebaseScheduleDataSource.create(context)
+    private val remoteDataSource = FirebaseScheduleDataSource.create(appContext)
     private var remoteListener: ListenerRegistration? = null
 
     init {
@@ -175,6 +176,7 @@ class ScheduleRepository(
             }
         }
         preferences.edit().putString(KEY_SCHEDULE_EVENTS, jsonArray.toString()).apply()
+        CalendarWidgetProvider.updateWidgets(appContext)
     }
 
     companion object {

@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
         updateManager = GitHubUpdateManager(this)
         deviceTokenRepository = DeviceTokenRepository(this)
         FamWallSystemNotifier(this)
+        applyWidgetLaunchDate(intent)
 
         setSupportActionBar(toolbar)
         setupCalendar()
@@ -91,6 +92,15 @@ class MainActivity : AppCompatActivity() {
         applySystemBarInsets()
         requestNotificationPermissionIfNeeded()
         checkForUpdate()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyWidgetLaunchDate(intent)
+        if (::calendarGrid.isInitialized && activeUserName.isNotEmpty()) {
+            renderCalendar(activeUserName)
+        }
     }
 
     override fun onResume() {
@@ -122,15 +132,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun applyWidgetLaunchDate(intent: Intent?) {
+        val rawDate = intent?.getStringExtra(EXTRA_OPEN_DATE)?.takeIf { it.isNotBlank() } ?: return
+        val targetDate = runCatching { LocalDate.parse(rawDate) }.getOrNull() ?: return
+        selectedDate = targetDate
+        displayedMonth = YearMonth.from(targetDate)
+    }
+
     private fun checkForUpdate() {
         if (!::updateManager.isInitialized) {
             return
         }
 
         updateManager.checkForUpdate(object : GitHubUpdateManager.UpdateCallback {
-            override fun onChecking() {
-                Toast.makeText(this@MainActivity, "업데이트 확인 중...", Toast.LENGTH_SHORT).show()
-            }
+            override fun onChecking() = Unit
 
             override fun onUpdateAvailable(release: GitHubUpdateManager.GitHubRelease) {
                 showUpdateDialog(release)
@@ -348,6 +363,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(R.string.select_user_confirm) { _, _ ->
                 val selectedUser = users[selectedIndex]
                 preferences.edit().putString(KEY_SELECTED_USER, selectedUser).apply()
+                CalendarWidgetProvider.updateWidgets(this)
                 updateToolbarUser(selectedUser)
             }
             .setCancelable(canCancel)
@@ -987,6 +1003,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PREFS_NAME = "famwall_prefs"
         private const val KEY_SELECTED_USER = "selected_user"
+        const val EXTRA_OPEN_DATE = "com.example.famwall.extra.OPEN_DATE"
         private const val MAX_MATERIAL_CHECKS_IN_CELL = 3
         private const val MAX_EVENT_BADGES_IN_CELL = 2
         private const val MAX_EVENT_SUMMARY_LINES_IN_CELL = 2

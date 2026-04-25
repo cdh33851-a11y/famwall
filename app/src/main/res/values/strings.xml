@@ -19,6 +19,8 @@
     <string name="theme_dark">&#xB2E4;&#xD06C; &#xD14C;&#xB9C8;</string>
     <string name="apply">&#xC801;&#xC6A9;</string>
     <string name="notifications">&#xC54C;&#xB9BC;</string>
+    <string name="calendar_widget_name">&#xAC00;&#xC871;&#xB3C4;&#xBC30; &#xCE98;&#xB9B0;&#xB354;</string>
+    <string name="calendar_widget_description">&#xBC14;&#xD0D5;&#xD654;&#xBA74;&#xC5D0;&#xC11C; &#xAC00;&#xC871; &#xC77C;&#xC815; &#xCE98;&#xB9B0;&#xB354;&#xB97C; &#xD655;&#xC778;&#xD569;&#xB2C8;&#xB2E4;.</string>
     <string name="today">&#xC624;&#xB298;</string>
     <string name="search_schedule">&#xC77C;&#xC815;&#xAC80;&#xC0C9;</string>
     <string name="previous_month">&#xC774;&#xC804; &#xB2EC;</string>

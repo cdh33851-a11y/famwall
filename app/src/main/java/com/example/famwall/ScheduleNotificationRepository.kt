@@ -212,6 +212,7 @@ class ScheduleNotificationRepository(
             context: Context,
             notifications: List<ScheduleNotification>,
         ) {
+            val appContext = context.applicationContext
             val jsonArray = JSONArray()
             notifications
                 .sortedByDescending { it.createdAt }
@@ -220,10 +221,19 @@ class ScheduleNotificationRepository(
                     runCatching { jsonArray.put(notification.toJson()) }
                 }
 
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_NOTIFICATIONS, jsonArray.toString())
                 .apply()
+            CalendarWidgetProvider.updateWidgets(appContext)
+        }
+
+        fun getLocalUnreadDates(context: Context, currentUserName: String): Set<LocalDate> {
+            return loadLocalNotifications(context.applicationContext)
+                .filter { it.isVisibleTo(currentUserName) }
+                .filterNot { it.isReadBy(currentUserName) }
+                .flatMap { notification -> notification.occurrenceDates.ifEmpty { listOf(notification.primaryDate()) } }
+                .toSet()
         }
     }
 }

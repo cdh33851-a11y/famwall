@@ -36,5 +36,6 @@ object FamWallThemeManager {
             .putString(KEY_APP_THEME, themePreference.key)
             .apply()
         AppCompatDelegate.setDefaultNightMode(themePreference.nightMode)
+        CalendarWidgetProvider.updateWidgets(context.applicationContext)
     }
 }
