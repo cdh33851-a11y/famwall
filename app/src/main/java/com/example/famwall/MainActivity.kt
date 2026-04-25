@@ -666,6 +666,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         selectedDate = cellDate
+        markDateNotificationsAsRead(cellDate)
         val cellMonth = YearMonth.from(cellDate)
         if (cellMonth != displayedMonth) {
             showMonth(cellMonth)
@@ -679,6 +680,13 @@ class MainActivity : AppCompatActivity() {
         } else {
             openScheduleDetailPage(cellDate)
         }
+    }
+
+    private fun markDateNotificationsAsRead(cellDate: LocalDate) {
+        if (!::notificationRepository.isInitialized) {
+            return
+        }
+        notificationRepository.markNotificationsOnDateAsRead(cellDate)
     }
 
     private fun openScheduleDetailPage(clickedDate: LocalDate) {

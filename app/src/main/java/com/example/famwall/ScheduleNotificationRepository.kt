@@ -63,9 +63,41 @@ class ScheduleNotificationRepository(
         onNotificationsChanged?.invoke()
     }
 
+    fun markNotificationsOnDateAsRead(date: LocalDate): Int {
+        val targetIndexes = notifications
+            .mapIndexedNotNull { index, notification ->
+                val hasUnreadDate = notification.isVisibleTo(currentUserName) &&
+                    !notification.isReadBy(currentUserName) &&
+                    notificationDates(notification).contains(date)
+                if (hasUnreadDate) index else null
+            }
+
+        if (targetIndexes.isEmpty()) {
+            return 0
+        }
+
+        targetIndexes.forEach { index ->
+            val notification = notifications[index]
+            notifications[index] = notification.copy(
+                readByUsers = (notification.readByUsers + currentUserName).distinct(),
+            )
+            remoteDataSource?.markAsRead(notification.id, currentUserName)
+        }
+
+        persistNotifications()
+        onNotificationsChanged?.invoke()
+        return targetIndexes.size
+    }
+
     fun close() {
         remoteListener?.remove()
         remoteListener = null
+    }
+
+    private fun notificationDates(notification: ScheduleNotification): Set<LocalDate> {
+        return notification.occurrenceDates
+            .ifEmpty { listOf(notification.primaryDate()) }
+            .toSet()
     }
 
     private fun startRemoteSync() {
