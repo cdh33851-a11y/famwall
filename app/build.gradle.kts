@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.material)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.functions)
     implementation(libs.firebase.messaging)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

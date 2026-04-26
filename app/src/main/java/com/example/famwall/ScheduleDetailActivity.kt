@@ -13,9 +13,12 @@ import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -31,6 +34,7 @@ import java.util.Locale
 
 class ScheduleDetailActivity : AppCompatActivity() {
     private lateinit var scheduleRepository: ScheduleRepository
+    private lateinit var aiContentOrganizer: AiScheduleContentOrganizer
     private lateinit var listContainer: LinearLayout
     private lateinit var selectedDate: LocalDate
     private lateinit var activeUserName: String
@@ -50,6 +54,7 @@ class ScheduleDetailActivity : AppCompatActivity() {
         selectedDate = readIntentDate()
         focusedEventId = intent.getStringExtra(EXTRA_FOCUS_EVENT_ID)
         scheduleRepository = createScheduleRepository()
+        aiContentOrganizer = AiScheduleContentOrganizer(this)
 
         setContentView(createPage())
     }
@@ -216,6 +221,10 @@ class ScheduleDetailActivity : AppCompatActivity() {
             addDetailLine(content, "\uC77C\uC815 \uAE30\uAC04", formatSelectedDateGroups(event))
         }
 
+        content.addView(createAiOrganizeButton(event), LinearLayout.LayoutParams(MATCH, dp(44)).apply {
+            setMargins(0, dp(14), 0, 0)
+        })
+
         val buttonRow = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             orientation = LinearLayout.HORIZONTAL
@@ -240,6 +249,14 @@ class ScheduleDetailActivity : AppCompatActivity() {
 
         card.addView(content)
         return card
+    }
+
+    private fun createAiOrganizeButton(event: ScheduleEvent): MaterialButton {
+        return createSmallActionButton("AI \uB0B4\uC6A9\uC815\uB9AC").apply {
+            setTextColor(color(R.color.on_accent_text))
+            backgroundTintList = ColorStateList.valueOf(getUserAccentColor(event.userName))
+            setOnClickListener { organizeScheduleContentWithAi(event) }
+        }
     }
 
     private fun createBaseCard(strokeColor: Int, radiusPx: Int): MaterialCardView {
@@ -297,6 +314,97 @@ class ScheduleDetailActivity : AppCompatActivity() {
             }
             setTextAppearance(R.style.TextAppearance_FamWall_Body)
         }, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(9), 0, 0) })
+    }
+
+    private fun organizeScheduleContentWithAi(event: ScheduleEvent) {
+        val rawContent = event.contentForDate(selectedDate).trim()
+            .ifEmpty { event.content.trim() }
+            .ifEmpty { event.title.trim() }
+        if (rawContent.isBlank()) {
+            Toast.makeText(this, "AI\uB85C \uC815\uB9AC\uD560 \uB0B4\uC6A9\uC774 \uC5C6\uC5B4\uC694.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val progressDialog = showAiProgressDialog()
+        aiContentOrganizer.organize(
+            event = event,
+            selectedDate = selectedDate,
+            onSuccess = { organizedContent ->
+                progressDialog.dismiss()
+                showAiOrganizedPreview(event, organizedContent)
+            },
+            onFailure = { exception ->
+                progressDialog.dismiss()
+                Toast.makeText(
+                    this,
+                    "AI \uB0B4\uC6A9\uC815\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. API \uC124\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.",
+                    Toast.LENGTH_LONG,
+                ).show()
+            },
+        )
+    }
+
+    private fun showAiProgressDialog(): AlertDialog {
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(6), dp(12), dp(6), 0)
+            addView(TextView(this@ScheduleDetailActivity).apply {
+                text = "\uC77C\uC815 \uB0B4\uC6A9\uC744 \uD604\uC7A5\uBA85, \uBE44\uBC00\uBC88\uD638, \uC791\uC5C5 \uC77C\uC815, \uACAC\uC801, \uC790\uC7AC\uB85C \uB098\uB220 \uC815\uB9AC\uD558\uACE0 \uC788\uC5B4\uC694."
+                setTextAppearance(R.style.TextAppearance_FamWall_Body)
+            })
+            addView(ProgressBar(this@ScheduleDetailActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
+                isIndeterminate = true
+            }, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(14), 0, 0) })
+        }
+
+        return MaterialAlertDialogBuilder(this)
+            .setTitle("AI \uB0B4\uC6A9\uC815\uB9AC")
+            .setView(content)
+            .setCancelable(false)
+            .create()
+            .apply { show() }
+    }
+
+    private fun showAiOrganizedPreview(
+        event: ScheduleEvent,
+        organizedContent: AiOrganizedScheduleContent,
+    ) {
+        val preview = ScrollView(this).apply {
+            addView(TextView(this@ScheduleDetailActivity).apply {
+                text = buildString {
+                    append(organizedContent.formattedText)
+                    if (organizedContent.warnings.isNotEmpty()) {
+                        append("\n\n\uD655\uC778 \uD544\uC694\n")
+                        organizedContent.warnings.forEach { warning -> append("- ").append(warning).append('\n') }
+                    }
+                }.trim()
+                setTextAppearance(R.style.TextAppearance_FamWall_Body)
+                setTextColor(color(R.color.text_primary))
+                setPadding(dp(4), dp(8), dp(4), dp(4))
+            })
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("AI \uC815\uB9AC \uBBF8\uB9AC\uBCF4\uAE30")
+            .setMessage("\uC801\uC6A9\uD558\uBA74 \uD604\uC7AC \uC120\uD0DD\uD55C \uB0A0\uC9DC\uC758 \uC77C\uC815 \uB0B4\uC6A9\uC774 \uC544\uB798 \uB0B4\uC6A9\uC73C\uB85C \uBC14\uB00C\uC5B4\uC694.")
+            .setView(preview)
+            .setNegativeButton("\uCDE8\uC18C", null)
+            .setPositiveButton("\uC801\uC6A9") { _, _ -> applyAiOrganizedContent(event, organizedContent.formattedText) }
+            .show()
+    }
+
+    private fun applyAiOrganizedContent(event: ScheduleEvent, formattedText: String) {
+        val updatedDateContents = event.dateContents.toMutableMap()
+        updatedDateContents[selectedDate] = formattedText
+
+        val updatedEvent = event.copy(
+            content = if (selectedDate == event.primaryContentDate()) formattedText else event.content,
+            dateContents = updatedDateContents.toSortedMap(),
+        )
+        scheduleRepository.updateEvent(updatedEvent)
+        ScheduleNotificationRepository.recordScheduleChange(this, ScheduleNotificationAction.UPDATED, updatedEvent)
+        renderScheduleList()
+        Toast.makeText(this, "AI\uB85C \uC815\uB9AC\uD55C \uB0B4\uC6A9\uC744 \uC801\uC6A9\uD588\uC5B4\uC694.", Toast.LENGTH_SHORT).show()
     }
 
     private fun confirmDeleteSchedule(event: ScheduleEvent) {
