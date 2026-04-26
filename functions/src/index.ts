@@ -156,6 +156,9 @@ export const organizeScheduleContent = onCall(
     if (!rawContent) {
       throw new HttpsError("invalid-argument", "No schedule content to organize.");
     }
+    if (rawContent.length > MAX_ORGANIZE_INPUT_CHARS) {
+      throw new HttpsError("invalid-argument", "Schedule content is too long to organize safely.");
+    }
 
     const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -364,3 +367,4 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const FCM_MULTICAST_LIMIT = 500;
+const MAX_ORGANIZE_INPUT_CHARS = 8_000;
