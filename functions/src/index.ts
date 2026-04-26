@@ -140,11 +140,7 @@ export const organizeScheduleContent = onCall(
     memory: "512MiB",
   },
   async (request): Promise<OrganizedScheduleContent> => {
-    const apiKey = OPENAI_API_KEY.value();
-    if (!apiKey) {
-      logger.error("OPENAI_API_KEY secret is not configured.");
-      throw new HttpsError("failed-precondition", "OpenAI API key is not configured.");
-    }
+    const apiKey = readOpenAiApiKey();
 
     const scheduleRequest = parseOrganizeScheduleRequest(request.data);
     const rawContent = [
@@ -201,7 +197,6 @@ export const organizeScheduleContent = onCall(
     if (!openAiResponse.ok) {
       logger.error("OpenAI schedule organizer request failed.", {
         status: openAiResponse.status,
-        body: responseBody,
       });
       throw new HttpsError("internal", "OpenAI request failed.");
     }
@@ -219,6 +214,24 @@ export const organizeScheduleContent = onCall(
     };
   },
 );
+
+function readOpenAiApiKey(): string {
+  const apiKey = OPENAI_API_KEY.value().trim();
+  if (!apiKey) {
+    logger.error("OPENAI_API_KEY secret is not configured.");
+    throw new HttpsError("failed-precondition", "OpenAI API key is not configured.");
+  }
+
+  if (!apiKey.startsWith("sk-") || /\s/.test(apiKey)) {
+    logger.error("OPENAI_API_KEY secret has an invalid format.", {
+      length: apiKey.length,
+      startsWithSk: apiKey.startsWith("sk-"),
+    });
+    throw new HttpsError("failed-precondition", "OpenAI API key setting is invalid.");
+  }
+
+  return apiKey;
+}
 
 function buildFcmData(
   notificationId: string,
