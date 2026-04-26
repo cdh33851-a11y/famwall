@@ -16,6 +16,8 @@ data class ScheduleEvent(
     var selectedDates: List<LocalDate> = emptyList(),
     var selectedDateCategories: Map<LocalDate, ScheduleCategory> = emptyMap(),
     var dateContents: Map<LocalDate, String> = emptyMap(),
+    var originalContent: String = "",
+    var originalDateContents: Map<LocalDate, String> = emptyMap(),
     var materialOrderedDates: List<LocalDate> = emptyList(),
     var scheduleType: ScheduleType = ScheduleType.CONTINUOUS,
     var createdAt: Long = System.currentTimeMillis(),
@@ -79,6 +81,22 @@ data class ScheduleEvent(
         }
     }
 
+    fun originalContentForDate(date: LocalDate?): String {
+        if (date != null && originalDateContents.containsKey(date)) {
+            return originalDateContents[date].orEmpty()
+        }
+
+        if (originalDateContents.isNotEmpty()) {
+            return ""
+        }
+
+        return if (date != null && date == primaryContentDate()) {
+            originalContent
+        } else {
+            ""
+        }
+    }
+
     fun primaryContentDate(): LocalDate? {
         return occurrenceDates().firstOrNull() ?: startDate ?: selectedDates.firstOrNull()
     }
@@ -101,6 +119,11 @@ data class ScheduleEvent(
             dateContentJson.put(date.toString(), content)
         }
 
+        val originalDateContentJson = JSONObject()
+        originalDateContents.forEach { (date, content) ->
+            originalDateContentJson.put(date.toString(), content)
+        }
+
         val materialOrderedDateArray = JSONArray()
         materialOrderedDates.forEach { materialOrderedDateArray.put(it.toString()) }
 
@@ -115,6 +138,8 @@ data class ScheduleEvent(
             .put(FIELD_SELECTED_DATES, selectedDateArray)
             .put(FIELD_SELECTED_DATE_CATEGORIES, selectedDateCategoryJson)
             .put(FIELD_DATE_CONTENTS, dateContentJson)
+            .put(FIELD_ORIGINAL_CONTENT, originalContent)
+            .put(FIELD_ORIGINAL_DATE_CONTENTS, originalDateContentJson)
             .put(FIELD_MATERIAL_ORDERED_DATES, materialOrderedDateArray)
             .put(FIELD_SCHEDULE_TYPE, scheduleType.key)
             .put(FIELD_CREATED_AT, createdAt)
@@ -132,6 +157,8 @@ data class ScheduleEvent(
         private const val FIELD_SELECTED_DATES = "selectedDates"
         private const val FIELD_SELECTED_DATE_CATEGORIES = "selectedDateCategories"
         private const val FIELD_DATE_CONTENTS = "dateContents"
+        private const val FIELD_ORIGINAL_CONTENT = "originalContent"
+        private const val FIELD_ORIGINAL_DATE_CONTENTS = "originalDateContents"
         private const val FIELD_MATERIAL_ORDERED_DATES = "materialOrderedDates"
         private const val FIELD_SCHEDULE_TYPE = "scheduleType"
         private const val FIELD_CREATED_AT = "createdAt"
@@ -150,6 +177,8 @@ data class ScheduleEvent(
                 selectedDates = parseSelectedDates(json.optJSONArray(FIELD_SELECTED_DATES)),
                 selectedDateCategories = parseSelectedDateCategories(json.optJSONObject(FIELD_SELECTED_DATE_CATEGORIES)),
                 dateContents = parseDateContents(json.optJSONObject(FIELD_DATE_CONTENTS)),
+                originalContent = json.optString(FIELD_ORIGINAL_CONTENT, ""),
+                originalDateContents = parseDateContents(json.optJSONObject(FIELD_ORIGINAL_DATE_CONTENTS)),
                 materialOrderedDates = parseSelectedDates(json.optJSONArray(FIELD_MATERIAL_ORDERED_DATES)),
                 scheduleType = ScheduleType.fromKey(json.optString(FIELD_SCHEDULE_TYPE, ScheduleType.CONTINUOUS.key)),
                 createdAt = createdAt,

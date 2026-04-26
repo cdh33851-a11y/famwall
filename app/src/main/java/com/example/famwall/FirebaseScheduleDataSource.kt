@@ -68,6 +68,8 @@ class FirebaseScheduleDataSource private constructor(
             FIELD_SELECTED_DATES to event.selectedDates.map { it.toString() },
             FIELD_SELECTED_DATE_CATEGORIES to event.selectedDateCategories.mapKeys { it.key.toString() }.mapValues { it.value.key },
             FIELD_DATE_CONTENTS to event.dateContents.mapKeys { it.key.toString() },
+            FIELD_ORIGINAL_CONTENT to event.originalContent,
+            FIELD_ORIGINAL_DATE_CONTENTS to event.originalDateContents.mapKeys { it.key.toString() },
             FIELD_MATERIAL_ORDERED_DATES to event.materialOrderedDates.map { it.toString() },
             FIELD_SCHEDULE_TYPE to event.scheduleType.key,
             FIELD_CREATED_AT to event.createdAt,
@@ -86,6 +88,7 @@ class FirebaseScheduleDataSource private constructor(
         val scheduleTypeKey = data[FIELD_SCHEDULE_TYPE] as? String
         val selectedDateCategories = data[FIELD_SELECTED_DATE_CATEGORIES] as? Map<String, Any?>
         val dateContents = data[FIELD_DATE_CONTENTS] as? Map<String, Any?>
+        val originalDateContents = data[FIELD_ORIGINAL_DATE_CONTENTS] as? Map<String, Any?>
 
         return ScheduleEvent(
             id = id,
@@ -98,6 +101,8 @@ class FirebaseScheduleDataSource private constructor(
             selectedDates = parseDateList(data[FIELD_SELECTED_DATES] as? List<*>),
             selectedDateCategories = parseDateCategoryMap(selectedDateCategories),
             dateContents = parseDateContentMap(dateContents),
+            originalContent = data[FIELD_ORIGINAL_CONTENT] as? String ?: "",
+            originalDateContents = parseDateContentMap(originalDateContents),
             materialOrderedDates = parseDateList(data[FIELD_MATERIAL_ORDERED_DATES] as? List<*>),
             scheduleType = ScheduleType.fromKey(scheduleTypeKey),
             createdAt = parseLong(data[FIELD_CREATED_AT]),
@@ -168,6 +173,8 @@ class FirebaseScheduleDataSource private constructor(
         private const val FIELD_SELECTED_DATES = "selectedDates"
         private const val FIELD_SELECTED_DATE_CATEGORIES = "selectedDateCategories"
         private const val FIELD_DATE_CONTENTS = "dateContents"
+        private const val FIELD_ORIGINAL_CONTENT = "originalContent"
+        private const val FIELD_ORIGINAL_DATE_CONTENTS = "originalDateContents"
         private const val FIELD_MATERIAL_ORDERED_DATES = "materialOrderedDates"
         private const val FIELD_SCHEDULE_TYPE = "scheduleType"
         private const val FIELD_CREATED_AT = "createdAt"

@@ -214,7 +214,9 @@ class ScheduleDetailActivity : AppCompatActivity() {
         }
         content.addView(titleRow)
 
-        addDetailLine(content, "\uB0B4\uC6A9", event.contentForDate(selectedDate).trim().ifEmpty { "\uB0B4\uC6A9 \uC5C6\uC74C" })
+        val displayContent = event.contentForDate(selectedDate).trim()
+        addDetailLine(content, "\uB0B4\uC6A9", displayContent.ifEmpty { "\uB0B4\uC6A9 \uC5C6\uC74C" })
+        addOriginalContentSection(content, event, displayContent)
         if (event.scheduleType == ScheduleType.CONTINUOUS) {
             addDetailLine(content, "\uC77C\uC815 \uAE30\uAC04", formatContinuousDateRange(event.startDate, event.endDate))
         } else {
@@ -316,8 +318,46 @@ class ScheduleDetailActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(MATCH, WRAP).apply { setMargins(0, dp(9), 0, 0) })
     }
 
+    private fun addOriginalContentSection(
+        container: LinearLayout,
+        event: ScheduleEvent,
+        displayContent: String,
+    ) {
+        val originalContent = event.originalContentForDate(selectedDate).trim()
+        if (originalContent.isBlank() || originalContent == displayContent.trim()) {
+            return
+        }
+
+        val originalText = TextView(this).apply {
+            text = originalContent
+            setTextAppearance(R.style.TextAppearance_FamWall_Body)
+            setTextColor(color(R.color.text_secondary))
+            setPadding(dp(12), dp(10), dp(12), dp(12))
+            visibility = View.GONE
+            background = createRoundedBackground(color(R.color.day_chip_background), dp(10))
+        }
+
+        val toggleButton = createSmallActionButton("원본 보기").apply {
+            setTextColor(color(R.color.text_primary))
+            backgroundTintList = ColorStateList.valueOf(color(R.color.day_chip_background))
+            setOnClickListener {
+                val isOpening = originalText.visibility != View.VISIBLE
+                originalText.visibility = if (isOpening) View.VISIBLE else View.GONE
+                text = if (isOpening) "원본 접기" else "원본 보기"
+            }
+        }
+
+        container.addView(toggleButton, LinearLayout.LayoutParams(WRAP, dp(40)).apply {
+            setMargins(0, dp(8), 0, 0)
+        })
+        container.addView(originalText, LinearLayout.LayoutParams(MATCH, WRAP).apply {
+            setMargins(0, dp(8), 0, 0)
+        })
+    }
+
     private fun organizeScheduleContentWithAi(event: ScheduleEvent) {
-        val rawContent = event.contentForDate(selectedDate).trim()
+        val rawContent = event.originalContentForDate(selectedDate).trim()
+            .ifEmpty { event.contentForDate(selectedDate).trim() }
             .ifEmpty { event.content.trim() }
             .ifEmpty { event.title.trim() }
         if (rawContent.isBlank()) {
@@ -395,11 +435,27 @@ class ScheduleDetailActivity : AppCompatActivity() {
 
     private fun applyAiOrganizedContent(event: ScheduleEvent, formattedText: String) {
         val updatedDateContents = event.dateContents.toMutableMap()
+        val updatedOriginalDateContents = event.originalDateContents.toMutableMap()
+        val currentContent = event.contentForDate(selectedDate).trim()
+            .ifEmpty { event.content.trim() }
+        if (currentContent.isNotBlank()) {
+            updatedOriginalDateContents.putIfAbsent(selectedDate, currentContent)
+        }
         updatedDateContents[selectedDate] = formattedText
 
         val updatedEvent = event.copy(
             content = if (selectedDate == event.primaryContentDate()) formattedText else event.content,
             dateContents = updatedDateContents.toSortedMap(),
+            originalContent = if (
+                selectedDate == event.primaryContentDate() &&
+                event.originalContent.isBlank() &&
+                currentContent.isNotBlank()
+            ) {
+                currentContent
+            } else {
+                event.originalContent
+            },
+            originalDateContents = updatedOriginalDateContents.toSortedMap(),
         )
         scheduleRepository.updateEvent(updatedEvent)
         ScheduleNotificationRepository.recordScheduleChange(this, ScheduleNotificationAction.UPDATED, updatedEvent)

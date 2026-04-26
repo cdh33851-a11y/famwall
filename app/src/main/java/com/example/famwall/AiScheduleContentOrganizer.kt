@@ -44,9 +44,12 @@ class AiScheduleContentOrganizer(context: Context) {
     }
 
     private fun buildPayload(event: ScheduleEvent, selectedDate: LocalDate): Map<String, Any?> {
-        val selectedContent = event.contentForDate(selectedDate).trim()
-        val fallbackContent = event.content.trim()
-        val allDateContents = event.dateContents
+        val selectedContent = event.originalContentForDate(selectedDate).trim()
+            .ifBlank { event.contentForDate(selectedDate).trim() }
+        val fallbackContent = event.originalContent.trim()
+            .ifBlank { event.content.trim() }
+        val sourceDateContents = event.originalDateContents.ifEmpty { event.dateContents }
+        val allDateContents = sourceDateContents
             .mapKeys { it.key.toString() }
             .filterValues { it.isNotBlank() }
 

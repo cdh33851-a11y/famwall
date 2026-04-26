@@ -328,7 +328,8 @@ class ScheduleSearchActivity : AppCompatActivity() {
         }
 
         return occurrenceDates.filter { date ->
-            event.contentForDate(date).lowercase(Locale.ROOT).contains(normalizedKeyword)
+            event.contentForDate(date).lowercase(Locale.ROOT).contains(normalizedKeyword) ||
+                event.originalContentForDate(date).lowercase(Locale.ROOT).contains(normalizedKeyword)
         }
     }
 
