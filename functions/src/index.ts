@@ -60,6 +60,39 @@ interface OrganizedScheduleContent {
   warnings: string[];
 }
 
+interface VoiceScheduleAssistantRequest {
+  query: string;
+  today: string;
+  currentUserName: string;
+  schedules: VoiceScheduleSummary[];
+}
+
+interface VoiceScheduleSummary {
+  id: string;
+  title: string;
+  category: string;
+  userName: string;
+  scheduleType: string;
+  startDate: string;
+  endDate: string;
+  occurrenceDates: string[];
+  baseContent: string;
+  baseOriginalContent: string;
+  occurrences: VoiceScheduleOccurrence[];
+}
+
+interface VoiceScheduleOccurrence {
+  date: string;
+  category: string;
+  content: string;
+  originalContent: string;
+  materialOrdered: boolean;
+}
+
+interface VoiceAssistantAnswer {
+  answerText: string;
+}
+
 export const sendScheduleNotificationPush = onDocumentCreated(
   "scheduleNotifications/{notificationId}",
   async (event) => {
@@ -215,6 +248,77 @@ export const organizeScheduleContent = onCall(
   },
 );
 
+export const answerScheduleAssistant = onCall(
+  {
+    secrets: [OPENAI_API_KEY],
+    timeoutSeconds: 60,
+    memory: "512MiB",
+  },
+  async (request): Promise<VoiceAssistantAnswer> => {
+    const apiKey = readOpenAiApiKey();
+    const assistantRequest = parseVoiceScheduleAssistantRequest(request.data);
+    if (!assistantRequest.query) {
+      throw new HttpsError("invalid-argument", "Voice assistant query is empty.");
+    }
+
+    const input = JSON.stringify(assistantRequest, null, 2);
+    if (input.length > MAX_VOICE_ASSISTANT_INPUT_CHARS) {
+      throw new HttpsError("invalid-argument", "Schedule data is too large for the voice assistant.");
+    }
+
+    const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        instructions: buildVoiceScheduleAssistantInstructions(),
+        input,
+        temperature: 0.1,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "voice_schedule_assistant_answer",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["answerText"],
+              properties: {
+                answerText: {
+                  type: "string",
+                  description: "A concise Korean answer suitable for text-to-speech.",
+                },
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const responseBody = await openAiResponse.text();
+    if (!openAiResponse.ok) {
+      logger.error("OpenAI voice assistant request failed.", {
+        status: openAiResponse.status,
+      });
+      throw new HttpsError("internal", "OpenAI voice assistant request failed.");
+    }
+
+    const parsedResponse = parseJsonObject<OpenAiResponseBody>(responseBody);
+    const outputText = extractOpenAiOutputText(parsedResponse);
+    const answer = parseJsonObject<VoiceAssistantAnswer>(outputText);
+    if (!answer.answerText?.trim()) {
+      throw new HttpsError("internal", "OpenAI returned an empty voice assistant answer.");
+    }
+
+    return {
+      answerText: answer.answerText.trim().slice(0, MAX_VOICE_ASSISTANT_OUTPUT_CHARS),
+    };
+  },
+);
+
 function readOpenAiApiKey(): string {
   const apiKey = OPENAI_API_KEY.value().trim();
   if (!apiKey) {
@@ -300,6 +404,74 @@ function parseOrganizeScheduleRequest(rawData: unknown): OrganizeScheduleRequest
     occurrenceDates: readStringArray(data.occurrenceDates),
     dateContents: readStringRecord(data.dateContents),
   };
+}
+
+function parseVoiceScheduleAssistantRequest(rawData: unknown): VoiceScheduleAssistantRequest {
+  const data = isRecord(rawData) ? rawData : {};
+  return {
+    query: readString(data.query),
+    today: readString(data.today),
+    currentUserName: readString(data.currentUserName),
+    schedules: readVoiceScheduleSummaries(data.schedules),
+  };
+}
+
+function readVoiceScheduleSummaries(value: unknown): VoiceScheduleSummary[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((schedule) => ({
+      id: readString(schedule.id),
+      title: readString(schedule.title),
+      category: readString(schedule.category),
+      userName: readString(schedule.userName),
+      scheduleType: readString(schedule.scheduleType),
+      startDate: readString(schedule.startDate),
+      endDate: readString(schedule.endDate),
+      occurrenceDates: readStringArray(schedule.occurrenceDates),
+      baseContent: readString(schedule.baseContent),
+      baseOriginalContent: readString(schedule.baseOriginalContent),
+      occurrences: readVoiceScheduleOccurrences(schedule.occurrences),
+    }));
+}
+
+function readVoiceScheduleOccurrences(value: unknown): VoiceScheduleOccurrence[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((occurrence) => ({
+      date: readString(occurrence.date),
+      category: readString(occurrence.category),
+      content: readString(occurrence.content),
+      originalContent: readString(occurrence.originalContent),
+      materialOrdered: occurrence.materialOrdered === true,
+    }));
+}
+
+function buildVoiceScheduleAssistantInstructions(): string {
+  return [
+    "너는 FamWall 앱의 한국어 일정 음성 비서다.",
+    "사용자는 운전 중일 수 있으므로 답변은 짧고 분명한 구어체로 말한다.",
+    "입력은 JSON이며 query, today, currentUserName, schedules가 들어 있다.",
+    "오늘, 내일, 모레, 이번 주, 다음 주 같은 상대 날짜는 반드시 today 값을 기준으로 해석한다.",
+    "일정 포함 여부는 schedules[].occurrences[].date 또는 occurrenceDates만 기준으로 판단한다.",
+    "사용자 이름, 카테고리, 현장명, 자재 주문 여부, 비밀번호, 금액, 메모를 질문 의도에 맞게 필터링한다.",
+    "질문이 애매하면 가장 가능성이 높은 의도를 기준으로 답하되, 모르면 짧게 다시 물어본다.",
+    "스케줄 데이터에 없는 일정이나 내용을 절대 만들어내지 않는다.",
+    "일정이 없으면 예를 들어 '내일 일정은 없어요.'처럼 간단히 답한다.",
+    "일정이 여러 개면 최대 5개까지만 날짜, 제목, 카테고리 중심으로 요약하고 나머지는 '외 N건'으로 말한다.",
+    "사용자가 비밀번호를 묻거나 현장 확인에 필요한 질문을 하면 비밀번호 정보를 포함해도 된다.",
+    "비밀번호나 금액은 데이터에 있을 때만 말하고, 추측하지 않는다.",
+    "자재 주문 여부를 물으면 materialOrdered 값을 기준으로 알려준다.",
+    "답변에는 마크다운, 대괄호 제목, 번호 목록을 쓰지 않는다.",
+    "문장은 TextToSpeech로 읽기 좋게 작성하고, 한 답변은 보통 2~6문장 안에 끝낸다.",
+  ].join("\n");
 }
 
 function buildScheduleOrganizerInstructions(): string {
@@ -406,3 +578,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const FCM_MULTICAST_LIMIT = 500;
 const MAX_ORGANIZE_INPUT_CHARS = 8_000;
+const MAX_VOICE_ASSISTANT_INPUT_CHARS = 80_000;
+const MAX_VOICE_ASSISTANT_OUTPUT_CHARS = 900;

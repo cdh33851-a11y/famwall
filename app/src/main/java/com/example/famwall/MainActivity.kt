@@ -3,6 +3,8 @@ package com.example.famwall
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.Manifest
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -13,6 +15,8 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
 import android.text.TextUtils
 import android.view.GestureDetector
 import android.view.Gravity
@@ -25,6 +29,8 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -53,7 +59,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var updateManager: GitHubUpdateManager
     private lateinit var notificationRepository: ScheduleNotificationRepository
     private lateinit var deviceTokenRepository: DeviceTokenRepository
+    private lateinit var voiceAssistant: VoiceScheduleAssistant
+    private lateinit var voiceAssistantLauncher: ActivityResultLauncher<Intent>
     private var notificationMenuItem: MenuItem? = null
+    private var textToSpeech: TextToSpeech? = null
+    private var isTextToSpeechReady = false
 
     private var displayedMonth: YearMonth = YearMonth.now()
     private var selectedDate: LocalDate = LocalDate.now()
@@ -83,9 +93,11 @@ class MainActivity : AppCompatActivity() {
         scheduleRepository = createScheduleRepository()
         updateManager = GitHubUpdateManager(this)
         deviceTokenRepository = DeviceTokenRepository(this)
+        voiceAssistant = VoiceScheduleAssistant(this)
         FamWallSystemNotifier(this)
         applyWidgetLaunchDate(intent)
 
+        setupVoiceAssistant()
         setSupportActionBar(toolbar)
         setupCalendar()
         setupCurrentUser()
@@ -121,6 +133,11 @@ class MainActivity : AppCompatActivity() {
         if (::notificationRepository.isInitialized) {
             notificationRepository.close()
         }
+        textToSpeech?.run {
+            stop()
+            shutdown()
+        }
+        textToSpeech = null
         super.onDestroy()
     }
 
@@ -271,6 +288,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_voice_assistant) {
+            startVoiceRecognition()
+            return true
+        }
         if (item.itemId == R.id.action_notifications) {
             openNotificationListPage()
             return true
@@ -312,6 +333,89 @@ class MainActivity : AppCompatActivity() {
 
     private fun openNotificationListPage() {
         startActivity(Intent(this, NotificationListActivity::class.java))
+    }
+
+    private fun setupVoiceAssistant() {
+        voiceAssistantLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode != Activity.RESULT_OK) {
+                return@registerForActivityResult
+            }
+
+            val spokenQuery = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+
+            if (spokenQuery.isNullOrBlank()) {
+                Toast.makeText(this, R.string.voice_assistant_no_result, Toast.LENGTH_SHORT).show()
+                return@registerForActivityResult
+            }
+
+            answerVoiceAssistantQuery(spokenQuery)
+        }
+
+        textToSpeech = TextToSpeech(this) { status ->
+            val speechEngine = textToSpeech ?: return@TextToSpeech
+            val languageResult = speechEngine.setLanguage(Locale.KOREAN)
+            isTextToSpeechReady = status == TextToSpeech.SUCCESS &&
+                languageResult != TextToSpeech.LANG_MISSING_DATA &&
+                languageResult != TextToSpeech.LANG_NOT_SUPPORTED
+        }
+    }
+
+    private fun startVoiceRecognition() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.KOREAN.toLanguageTag())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.voice_assistant_prompt))
+        }
+
+        runCatching {
+            voiceAssistantLauncher.launch(intent)
+        }.onFailure { error ->
+            if (error is ActivityNotFoundException) {
+                Toast.makeText(this, R.string.voice_assistant_listening_error, Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, R.string.voice_assistant_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun answerVoiceAssistantQuery(query: String) {
+        val progressDialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.voice_assistant_answer_title)
+            .setMessage(R.string.voice_assistant_checking)
+            .setCancelable(false)
+            .create()
+        progressDialog.show()
+
+        voiceAssistant.answer(
+            query = query,
+            currentUserName = activeUserName,
+            events = scheduleRepository.getAllEvents(),
+            today = LocalDate.now(),
+            onSuccess = { answer ->
+                progressDialog.dismiss()
+                speakVoiceAssistantAnswer(answer.answerText)
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.voice_assistant_answer_title)
+                    .setMessage(getString(R.string.voice_assistant_dialog_message_format, query, answer.answerText))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            },
+            onFailure = {
+                progressDialog.dismiss()
+                Toast.makeText(this, R.string.voice_assistant_failed, Toast.LENGTH_LONG).show()
+            },
+        )
+    }
+
+    private fun speakVoiceAssistantAnswer(answerText: String) {
+        if (!isTextToSpeechReady) {
+            return
+        }
+
+        textToSpeech?.speak(answerText, TextToSpeech.QUEUE_FLUSH, null, VOICE_ASSISTANT_UTTERANCE_ID)
     }
 
     private fun setupCalendarSwipe() {
@@ -1008,6 +1112,7 @@ class MainActivity : AppCompatActivity() {
         private const val MAX_EVENT_BADGES_IN_CELL = 2
         private const val MAX_EVENT_SUMMARY_LINES_IN_CELL = 2
         private const val REQUEST_NOTIFICATION_PERMISSION = 4101
+        private const val VOICE_ASSISTANT_UTTERANCE_ID = "famwall_voice_assistant_answer"
         private const val MATCH = LinearLayout.LayoutParams.MATCH_PARENT
         private const val WRAP = LinearLayout.LayoutParams.WRAP_CONTENT
     }
