@@ -674,7 +674,7 @@ class MainActivity : AppCompatActivity() {
             includeFontPadding = false
         }, LinearLayout.LayoutParams(WRAP, dp(22)))
 
-        topRow.addView(createMaterialOrderStatusRow(materialOrderedEvents), LinearLayout.LayoutParams(WRAP, dp(22)))
+        topRow.addView(createMaterialOrderStatusRow(materialOrderedEvents), LinearLayout.LayoutParams(WRAP, dp(24)))
         topRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         if (hasUnreadNotification) {
             topRow.addView(createUnreadNotificationDot(), LinearLayout.LayoutParams(dp(7), dp(7)).apply {
@@ -703,8 +703,8 @@ class MainActivity : AppCompatActivity() {
         return LinearLayout(this).apply {
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
 
-            materialOrderedEvents.take(MAX_MATERIAL_CHECKS_IN_CELL).forEach { materialOrderedEvent ->
-                addView(createMaterialOrderCheckBadge(materialOrderedEvent))
+            materialOrderedEvents.take(MAX_MATERIAL_CHECKS_IN_CELL).forEachIndexed { index, materialOrderedEvent ->
+                addView(createMaterialOrderCheckBadge(materialOrderedEvent, index))
             }
 
             val hiddenCount = materialOrderedEvents.size - MAX_MATERIAL_CHECKS_IN_CELL
@@ -714,15 +714,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createMaterialOrderCheckBadge(materialOrderedEvent: ScheduleEvent): TextView {
+    private fun createMaterialOrderCheckBadge(materialOrderedEvent: ScheduleEvent, position: Int): TextView {
         return TextView(this).apply {
             text = "\u2713"
-            textSize = 13f
+            textSize = 18f
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             gravity = Gravity.CENTER
             includeFontPadding = false
             setTextColor(getUserAccentColor(materialOrderedEvent.userName))
-            layoutParams = LinearLayout.LayoutParams(dp(14), dp(20)).apply { setMargins(dp(1), 0, 0, 0) }
+            layoutParams = LinearLayout.LayoutParams(dp(18), dp(24)).apply {
+                setMargins(if (position == 0) dp(1) else dp(-3), 0, 0, 0)
+            }
         }
     }
 
